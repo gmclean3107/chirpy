@@ -18,9 +18,9 @@ func main() {
 	apiConfig := apiConfig{}
 
 	handler.Handle("/app/", apiConfig.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(fileRoot)))))
-	handler.HandleFunc("GET /healthz", handlerReadiness)
-	handler.HandleFunc("GET /metrics", apiConfig.handlerMetrics)
-	handler.HandleFunc("POST /reset", apiConfig.handlerResetMetrics)
+	handler.HandleFunc("GET /api/healthz", handlerReadiness)
+	handler.HandleFunc("GET /api/metrics", apiConfig.handlerMetrics)
+	handler.HandleFunc("POST /api/reset", apiConfig.handlerResetMetrics)
 
 	server := http.Server{
 		Addr:    ":" + port,
