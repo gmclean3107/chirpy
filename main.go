@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"sync/atomic"
@@ -19,41 +18,17 @@ func main() {
 	apiConfig := apiConfig{}
 
 	handler.Handle("/app/", apiConfig.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(fileRoot)))))
-	handler.HandleFunc("/healthz", handlerReadiness)
-	handler.HandleFunc("/metrics", apiConfig.handlerMetrics)
-	handler.HandleFunc("/reset", apiConfig.handlerResetMetrics)
+	handler.HandleFunc("GET /healthz", handlerReadiness)
+	handler.HandleFunc("GET /metrics", apiConfig.handlerMetrics)
+	handler.HandleFunc("POST /reset", apiConfig.handlerResetMetrics)
 
 	server := http.Server{
 		Addr:    ":" + port,
 		Handler: handler,
 	}
 
-	err := server.ListenAndServe()
+	log.Printf("Serving files from %s on port: %s\n", fileRoot, port)
 
-	if err != nil {
-		log.Fatalf("error starting server: %v", err)
-	}
-}
+	log.Fatal(server.ListenAndServe())
 
-func handlerReadiness(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(http.StatusText(http.StatusOK)))
-}
-
-func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write(fmt.Appendf(nil, "Hits: %v", cfg.fileServerHits.Load()))
-}
-
-func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.fileServerHits.Add(1)
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (cfg *apiConfig) handlerResetMetrics(w http.ResponseWriter, r *http.Request) {
-	cfg.fileServerHits.Store(0)
 }
