@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gmclean3107/chirpy/internal/database"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -19,6 +20,11 @@ type apiConfig struct {
 func main() {
 	const fileRoot = "."
 	const port = "8080"
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 	dbURL := os.Getenv("DB_URL")
 
@@ -38,9 +44,10 @@ func main() {
 
 	handler.HandleFunc("GET /api/healthz", handlerReadiness)
 	handler.HandleFunc("POST /api/validate_chirp", handlerValidatePost)
+	handler.HandleFunc("POST /api/users", apiConfig.handlerCreateUser)
 
 	handler.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)
-	handler.HandleFunc("POST /admin/reset", apiConfig.handlerResetMetrics)
+	handler.HandleFunc("POST /admin/reset", apiConfig.handlerResetApi)
 
 	server := http.Server{
 		Addr:    ":" + port,
