@@ -43,8 +43,8 @@ func main() {
 	handler.Handle("/app/", apiConfig.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(fileRoot)))))
 
 	handler.HandleFunc("GET /api/healthz", handlerReadiness)
-	handler.HandleFunc("POST /api/validate_chirp", handlerValidatePost)
 	handler.HandleFunc("POST /api/users", apiConfig.handlerCreateUser)
+	handler.HandleFunc("POST /api/chirps", apiConfig.handlerCreateChirp)
 
 	handler.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)
 	handler.HandleFunc("POST /admin/reset", apiConfig.handlerResetApi)
