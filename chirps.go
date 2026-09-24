@@ -15,6 +15,14 @@ type parameters struct {
 	Body   string    `json:"body"`
 }
 
+type returnVals struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
 func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
@@ -31,27 +39,14 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	cfg.handlerValidatePost(w, r, params)
-
-}
-
-func (cfg *apiConfig) handlerValidatePost(w http.ResponseWriter, r *http.Request, params parameters) {
-
-	type returnVals struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Body      string    `json:"body"`
-		UserID    uuid.UUID `json:"user_id"`
-	}
-
-	const maxChirpLength = 140
-	if len(params.Body) > maxChirpLength {
-		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
+	if params.UserID == uuid.Nil {
+		respondWithError(w, http.StatusBadRequest, "User ID is required", nil)
 		return
 	}
 
-	replaceProfanity(&params.Body)
+	if !cfg.handlerValidatePost(w, &params) {
+		return
+	}
 
 	res, err := cfg.queries.CreateChirp(r.Context(), database.CreateChirpParams{
 		UserID: params.UserID,
@@ -70,6 +65,41 @@ func (cfg *apiConfig) handlerValidatePost(w http.ResponseWriter, r *http.Request
 		Body:      res.Body,
 		UserID:    res.UserID,
 	})
+
+}
+
+func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request) {
+	chirps, err := cfg.queries.GetAllChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to fetch chirps", err)
+		return
+	}
+
+	chirpResponses := []returnVals{}
+	for _, chirp := range chirps {
+		chirpResponses = append(chirpResponses, returnVals{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
+		})
+	}
+
+	respondWithJSON(w, http.StatusOK, chirpResponses)
+}
+
+func (cfg *apiConfig) handlerValidatePost(w http.ResponseWriter, params *parameters) bool {
+
+	const maxChirpLength = 140
+	if len(params.Body) > maxChirpLength {
+		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
+		return false
+	}
+
+	replaceProfanity(&params.Body)
+	return true
+
 }
 
 func replaceProfanity(chirp *string) {
